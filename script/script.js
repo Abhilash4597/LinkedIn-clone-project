@@ -1,4 +1,14 @@
 'use strict';
+//# ------------------------------ API ENDPOINTS ----------------------------- */
+const _ALLPOSTS =
+  'https://linkbackendposts-production.up.railway.app/link/getAllposts';
+const _CREATEPOST =
+  'https://linkbackendposts-production.up.railway.app/link/createpost';
+const _UPDATEPOST =
+  'https://linkbackendposts-production.up.railway.app/link/updatepost';
+const _POSTCOMMENT =
+  'https://linkbackendposts-production.up.railway.app/link/postcomment';
+
 //# ------------------------------- CHANGE NAME ------------------------------ */
 const fullName = document.querySelectorAll('.fullName');
 const storedName = JSON.parse(localStorage.getItem('auth'));
@@ -6,25 +16,22 @@ const displayName = storedName?.[0]['name'] ?? 'Professor';
 fullName.forEach(item => {
   item.textContent = displayName;
 });
-
 //# ------------------------------------ * ----------------------------------- */
-let userData;
-let id;
+let postsData;
 const posts = document.querySelector('.posts');
-window.onload = async () => {
+const getPost = async function () {
   const result = await fetch(
-    'https://63a82a65f4962215b57c14fa.mockapi.io/api/v1/userData'
+    'https://linkbackendposts-production.up.railway.app/link/getAllposts',
+    { method: 'POST' }
   );
-  const post = await result.json();
-  console.log(post[0].userData);
-  userData = post[0].userData;
-  id = post[0].userData.length;
+  postsData = await result.json();
   posts.insertAdjacentHTML(
     'afterbegin',
-    post[0].userData
+    postsData
       .map(post => {
+        post.reactorImage ||= 'https://wallpaperaccess.com/full/2514661.jpg';
         return `
-    <div class="post" data-id="${post.id}">
+    <div class="post" data-id="${post._id}">
     <div class="reactor-box flex">
     <div class="reactor flex">
       <img src="${post.reactorImage}" alt="reactor-image">
@@ -141,7 +148,18 @@ window.onload = async () => {
           <span style="user-select: none;">Send</span>
         </li>
       </ul>
-            <section class="create_comment_box">
+    </div>
+  `;
+      })
+      .join('')
+  );
+};
+getPost();
+
+//# ----------------------------------- COMMENT INPUT RENDER && COMMENTS RENDER ----------------------------------- */
+const renderCommentInput = function () {
+  return `
+          <section class="create_comment_box">
           <div class="cmnt_box">
             <img class="cmnt_img" src="https://wallpaperaccess.com/full/2514661.jpg" alt="">
             <div class="cmnt_area">
@@ -164,90 +182,67 @@ window.onload = async () => {
           </div>
           <button class="btn-post-comment hidden">Post</button>
         </section>
-
-  <section class="read_comment">
-          <div class="read_cmnt_box">
-            <div class="cmntr_img">
-              <img
-                src="${post.comments[0].commentatorImage}"
-                alt="">
-            </div>
-            <div class="cmnt_text_box">
-              <div class="cmnt_text">
-                <div class="flex">
-                  <div class="cmntr_name">
-                    <h4>${post.comments[0].commentatorName}</h4> <span>• 3rd+</span>
-                  </div>
-                  <div class="time">${post.comments[0].commentTime}</div>
-                </div>
-                <p class="occupation">${post.comments[0].commentatorDesignation}</p>
-                <p class="cmnt_msg_text">${post.comments[0].comment}</p>
-              </div>
-              <div class="cmnt_reaction">
-                <p class="like">Like &middot; ${post.comments[0].commentLikes}</p>
-                <p>|</p>
-                <p class="reply">Reply</p>
-              </div>
-            </div>
-          </div>
-        </section>
-    </div>
   `;
-      })
-      .join('')
-  );
 };
 
-//# -------------------------- Message popup toggle -------------------------- */
-const togglerDown = document.querySelector('.downArrow');
-const togglerUp = document.querySelector('.upArrow');
-const messageBlock = document.querySelector('.message_complete_block');
+const getPostArr = function (e) {
+  let commentsArr;
+  let dataId;
+  let post;
 
-togglerUp.addEventListener('click', function () {
-  messageBlock.classList.remove('display_block');
-});
-
-togglerDown.addEventListener('click', function () {
-  messageBlock.classList.add('display_block');
-});
-
-//# ------------------------------- WORK POPUP ------------------------------- */
-
-const togglerWork = document.querySelector('.ph-x');
-const workPopup = document.querySelector('.work_popup');
-const workIcon = document.querySelector('.nine-dots');
-
-document.body.addEventListener('click', e => {
-  if (e.target.parentElement.classList.contains('nine-dots')) {
-    workPopup.classList.remove('display_block');
-    overlay.classList.remove('hidden');
-    document.body.classList.add('disable-scroll');
+  if (e.target.classList.contains('btn-comment')) {
+    dataId = e.path[3].dataset.id;
+    post = e.path[3];
   }
-});
+  for (let i = 0; i < postsData.length; i++) {
+    if (postsData[i]._id == dataId) {
+      commentsArr = postsData[i].comments;
+    }
+  }
+  const insertHere = post.querySelector('.react-box');
+  if (e.target.parentElement.parentElement.nextElementSibling) return;
+  let html;
+  if (commentsArr.length > 0) {
+    html = commentsArr
+      .map(comments => {
+        renderCommentInput();
+        return `
+          <section class="read_comment">
+            <div class="read_cmnt_box">
+              <div class="cmntr_img">
+                <img
+                  src="${comments.commentatorImage}"
+                  alt="">
+              </div>
+              <div class="cmnt_text_box">
+                <div class="cmnt_text">
+                  <div class="flex">
+                    <div class="cmntr_name">
+                      <h4>${comments.commentatorName}</h4> <span>• 3rd+</span>
+                    </div>
+                    <div class="time">${comments.commentTime}</div>
+                  </div>
+                  <p class="occupation">${comments.commentatorDesignation}</p>
+                  <p class="cmnt_msg_text">${comments.comment}</p>
+                </div>
+                <div class="cmnt_reaction">
+                  <p class="like">Like &middot; ${comments.commentLikes}</p>
+                  <p>|</p>
+                  <p class="reply">Reply</p>
+                </div>
+              </div>
+            </div>
+          </section>
+      `;
+      })
+      .join('');
+    insertHere.insertAdjacentHTML('afterend', html);
+  }
+  console.log(commentsArr);
 
-togglerWork.addEventListener('click', function () {
-  workPopup.classList.add('display_block');
-  overlay.classList.add('hidden');
-  document.body.classList.remove('disable-scroll');
-});
-
-//# ------------------------------- POST POPUP------------------------------- */
-const overlay = document.querySelector('.overlay');
-const postInput = document.querySelector('.start-post');
-const postPopup = document.querySelector('.post-popup');
-const closePostPopup = document.querySelector('.close-postPopup');
-
-postInput.addEventListener('click', function () {
-  postPopup.classList.remove('display_block');
-  overlay.classList.remove('hidden');
-  document.body.classList.add('disable-scroll');
-});
-
-closePostPopup.addEventListener('click', function () {
-  postPopup.classList.add('display_block');
-  overlay.classList.add('hidden');
-  document.body.classList.remove('disable-scroll');
-});
+  insertHere.insertAdjacentHTML('afterend', renderCommentInput());
+};
+document.addEventListener('click', getPostArr);
 
 //# ------------------------------- CREATE POST ------------------------------ */
 const postBox = document.querySelector('.posts');
@@ -267,7 +262,7 @@ imageInput.addEventListener('change', function (e) {
 btnPost.addEventListener('click', () => {
   if (postText.value) {
     const html = `
-    <div class="post" data-id="${id}">
+    <div class="post" data-id="">
       <div class="poster-box flex">
         <div class="poster-info flex">
           <img
@@ -383,95 +378,85 @@ btnPost.addEventListener('click', () => {
     // const fragment = document.createRange().createContextualFragment(html);
     //todo:
     const obj = {
-      id: id,
-      reactorImage:
-        'https://media.licdn.com/dms/image/C4E03AQEgiylGPPDJHQ/profile-displayphoto-shrink_400_400/0/1589355915977?e=1676505600&v=beta&t=j9BclcehrATV_hDgGruYX0IACrLRVy8kZgJyJBiQJ_g',
-      reactorName: 'Devik roy',
+      reactorImage: '',
+      reactorName: displayName,
       authorImage: 'https://wallpaperaccess.com/full/2514661.jpg',
-      authorName: 'Rahul Singh',
-      jobTitle: 'Marketing | startup',
+      authorName: displayName,
+      jobTitle: 'CS Professor at Harward University',
       postTime: '1s',
       postDescription: postText.value,
       image: '',
       reactionCount: 0,
-      commentCount: 0,
       repostCount: 0,
       comments: [
-        {
-          commentatorImage: 'https://wallpaperaccess.com/full/2514661.jpg',
-          commentatorName: 'Daya Don',
-          commentatorDesignation: 'Pro player',
-          comment: [],
-          commentTime: '1s',
-          commentLikes: 0,
-        },
+        // {
+        //   commentatorImage: '',
+        //   commentatorName: '',
+        //   commentatorDesignation: '',
+        //   comment: '',
+        //   commentTime: '',
+        //   commentLikes: 0,
+        // },
       ],
     };
-    userData.push(obj);
+
+    fetch(
+      'https://linkbackendposts-production.up.railway.app/link/createpost',
+      {
+        method: 'POST', // or 'PUT'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(obj),
+      }
+    )
+      .then(response => response.json())
+      .then(data => {
+        console.log('Success:', data);
+        postsData.unshift(obj);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+
     postBox.insertAdjacentHTML('afterbegin', html);
     postPopup.classList.add('display_block');
     overlay.classList.add('hidden');
     document.body.classList.remove('disable-scroll');
+
     postText.value = '';
-    id++;
   } else {
     alert('Post description cannot be empty.');
   }
 });
 
+const updatePost = async (url, obj) => {
+  let response = await fetch(url, {
+    method: 'PATCH', // or 'PUT'
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(obj),
+  });
+};
 //# --------------------------------- LIKE FN -------------------------------- */
-document.body.addEventListener('click', function (e) {
+document.body.addEventListener('click', async function (e) {
   if (e.target.classList.contains('clicked')) return;
   if (
     e.target.classList.contains('btn-like') &&
     e.target.closest('.post').classList.contains('post')
   ) {
     e.target.classList.add('clicked');
-    for (let i = 0; i < userData.length; i++) {
-      if (e.target.closest('.post').dataset.id == userData[i].id) {
-        userData[i].reactionCount++;
-        e.target.parentElement.parentElement.previousElementSibling.children[0].children[0].textContent = `${userData[i].reactionCount} Likes`;
+    for (let i = 0; i < postsData.length; i++) {
+      if (e.target.closest('.post').dataset.id == postsData[i]._id) {
+        +postsData[i].reactionCount++;
+        e.target.parentElement.parentElement.previousElementSibling.children[0].children[0].textContent = `${postsData[i].reactionCount} Likes`;
+        let obj = {
+          _id: postsData[i]._id,
+          reactionCount: postsData[i].reactionCount,
+        };
+        updatePost(_UPDATEPOST, obj);
       }
-    }
-  }
-});
-
-//# ----------------------------------- COMMENT INPUT RENDER FN ----------------------------------- */
-document.body.addEventListener('click', function (e) {
-  if (e.target.classList.contains('btn-comment')) {
-    if (e.target.parentElement.parentElement.nextElementSibling) return;
-    else {
-      e.target.classList.add('active');
-      const html = `
-          <section class="create_comment_box">
-          <div class="cmnt_box">
-            <img class="cmnt_img" src="https://wallpaperaccess.com/full/2514661.jpg" alt="">
-            <div class="cmnt_area">
-              <input class="add_comment" placeholder="Add a comment...">
-              <div class="emoji">
-                <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-supported-dps="24x24"
-                    fill="currentColor" class="mercado-match" width="24" height="24" focusable="false">
-                    <path
-                      d="M8 10.5A1.5 1.5 0 119.5 12 1.5 1.5 0 018 10.5zm6.5 1.5a1.5 1.5 0 10-1.5-1.5 1.5 1.5 0 001.5 1.5zm7.5 0A10 10 0 1112 2a10 10 0 0110 10zm-2 0a8 8 0 10-8 8 8 8 0 008-8zm-8 4a6 6 0 01-4.24-1.76l-.71.76a7 7 0 009.89 0l-.71-.71A6 6 0 0112 16z">
-                    </path>
-                  </svg></div>
-                <div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-supported-dps="24x24"
-                    fill="currentColor" class="mercado-match" width="24" height="24" focusable="false">
-                    <path
-                      d="M19 4H5a3 3 0 00-3 3v10a3 3 0 003 3h14a3 3 0 003-3V7a3 3 0 00-3-3zm1 13a1 1 0 01-.29.71L16 14l-2 2-6-6-4 4V7a1 1 0 011-1h14a1 1 0 011 1zm-2-7a2 2 0 11-2-2 2 2 0 012 2z">
-                    </path>
-                  </svg></div>
-              </div>
-            </div>
-          </div>
-          <button class="btn-post-comment hidden">Post</button>
-          
-        </section>
-    `;
-      e.target.parentElement.parentElement.parentElement.insertAdjacentHTML(
-        'beforeend',
-        html
-      );
     }
   }
 });
@@ -490,23 +475,32 @@ postContainer.addEventListener('input', function (e) {
 
 document.body.addEventListener('click', function (e) {
   if (e.target.classList.contains('btn-post-comment')) {
-    for (let i = 0; i < userData.length; i++) {
-      if (e.target.parentElement.parentElement.dataset.id == userData[i].id) {
-        userData[i].comments[0].comment.push(
-          e.target.parentElement.children[0].children[1].children[0].value
-        );
-        userData[i].commentCount++;
-        console.log(
-          e.target.parentElement.parentElement.children[4].children[1]
-            .children[0]
-        );
-        // e.target.parentElement.parentElement.children[4].children[1].children[0].textContent = `${userData[i].commentCount} Comments`;
+    for (let i = 0; i < postsData.length; i++) {
+      if (e.target.parentElement.parentElement.dataset.id == postsData[i]._id) {
+        let comment =
+          e.target.parentElement.children[0].children[1].children[0].value;
+        const obj = {
+          _id: postsData[i]._id,
+          comments: [
+            {
+              commentatorImage: '',
+              commentatorName: '',
+              commentatorDesignation: '',
+              comment: comment,
+              commentTime: '',
+              commentLikes: 0,
+            },
+          ],
+        };
+        postsData[i].comments.push(obj);
+        updatePost(_POSTCOMMENT, obj);
         console.log(e.target, e.path);
         e.path[2].querySelector(
           '.comment-count'
-        ).textContent = `${userData[i].commentCount} Comments`;
+        ).textContent = `${postsData[i].comments.length} Comments`;
       }
     }
+
     //# render comment html
     const html = `
             <section class="read_comment">
@@ -622,4 +616,71 @@ showLess.addEventListener('click', () => {
   moreNews.classList.add('display_block');
   showMore.classList.remove('display_block');
   showLess.classList.add('display_block');
+});
+
+// const deletePost = async (url, obj) => {
+//   let response = await fetch(url, { method: 'POST' });
+//   console.log(response);
+//   let data = await response.json();
+//   let ids = [];
+//   const d = data.map(id => {
+//     ids.push(id._id);
+//   });
+//   console.log(ids);
+//   return ids;
+// };
+
+// deletePost(
+//   'https://linkbackendposts-production.up.railway.app/link/getAllposts'
+// );
+
+//# -------------------------- Message popup toggle -------------------------- */
+const togglerDown = document.querySelector('.downArrow');
+const togglerUp = document.querySelector('.upArrow');
+const messageBlock = document.querySelector('.message_complete_block');
+
+togglerUp.addEventListener('click', function () {
+  messageBlock.classList.remove('display_block');
+});
+
+togglerDown.addEventListener('click', function () {
+  messageBlock.classList.add('display_block');
+});
+
+//# ------------------------------- WORK POPUP ------------------------------- */
+
+const togglerWork = document.querySelector('.ph-x');
+const workPopup = document.querySelector('.work_popup');
+const workIcon = document.querySelector('.nine-dots');
+
+document.body.addEventListener('click', e => {
+  if (e.target.parentElement.classList.contains('nine-dots')) {
+    workPopup.classList.remove('display_block');
+    overlay.classList.remove('hidden');
+    document.body.classList.add('disable-scroll');
+  }
+});
+
+togglerWork.addEventListener('click', function () {
+  workPopup.classList.add('display_block');
+  overlay.classList.add('hidden');
+  document.body.classList.remove('disable-scroll');
+});
+
+//# ------------------------------- POST POPUP------------------------------- */
+const overlay = document.querySelector('.overlay');
+const postInput = document.querySelector('.start-post');
+const postPopup = document.querySelector('.post-popup');
+const closePostPopup = document.querySelector('.close-postPopup');
+
+postInput.addEventListener('click', function () {
+  postPopup.classList.remove('display_block');
+  overlay.classList.remove('hidden');
+  document.body.classList.add('disable-scroll');
+});
+
+closePostPopup.addEventListener('click', function () {
+  postPopup.classList.add('display_block');
+  overlay.classList.add('hidden');
+  document.body.classList.remove('disable-scroll');
 });
