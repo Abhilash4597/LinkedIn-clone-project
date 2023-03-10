@@ -18,7 +18,7 @@ const fullName = document.querySelectorAll('.fullName');
 const storedData = JSON.parse(localStorage.getItem('auth'));
 const displayName = storedData?.[0]['name'] ?? 'Professor';
 const displayImage =
-  storedData[0]?.image ?? 'https://wallpaperaccess.com/full/2514661.jpg';
+  storedData?.[0]['image'] ?? 'https://wallpaperaccess.com/full/2514661.jpg';
 
 fullName.forEach(item => {
   item.textContent = displayName;
